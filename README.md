@@ -1,6 +1,6 @@
 # cargo-clean-all
 
-Função Bash para limpar todos os workspaces Cargo encontrados recursivamente sob um diretório base, ignorando diretórios ocultos e fornecendo mensagens visuais informativas.
+Função Bash para limpar todos os projetos Cargo (tanto workspaces `[workspace]` quanto projetos simples `[package]`) encontrados recursivamente sob um diretório base, ignorando diretórios ocultos e fornecendo mensagens visuais informativas.
 
 ---
 
@@ -15,11 +15,12 @@ Função Bash para limpar todos os workspaces Cargo encontrados recursivamente s
 ## ✨ Funcionalidades
 
 - **Busca recursiva:** Procura recursivamente por todos os arquivos `Cargo.toml` sob o diretório base informado, ignorando diretórios ocultos (nomes iniciados por ponto).
-- **Limpa apenas workspaces:** Executa `cargo clean` apenas nos diretórios onde o `Cargo.toml` possui a seção `[workspace]`.
+- **Limpa workspaces e packages:** Executa `cargo clean` tanto em diretórios onde o `Cargo.toml` possui a seção `[workspace]` quanto `[package]`.
 - **Valida existência do diretório `target`:** Só executa a limpeza se o diretório `target` existir, evitando comandos desnecessários.
 - **Feedback visual:** Usa emojis para indicar ações, sucessos, falhas e avisos.
 - **Flexibilidade:** Permite passar o diretório base como argumento; se não informado, usa `~/Repositories`.
 - **Checagem de dependência:** Verifica se o comando `cargo` está instalado e acessível no PATH antes de iniciar.
+- **Mensagens detalhadas:** Informa se está limpando um workspace ou um package, e mostra avisos para permissões ou ausência do diretório `target`.
 
 ---
 
@@ -37,7 +38,7 @@ cargo-clean-all [diretorio_base]
 ```
 
 - Se `diretorio_base` não for informado, será usado `~/Repositories` por padrão.
-- O script busca recursivamente por workspaces Cargo (projetos com `[workspace]` no `Cargo.toml`) dentro dessa pasta e todas as suas subpastas, ignorando diretórios ocultos.
+- O script busca recursivamente por projetos Cargo (projetos com `[workspace]` **ou** `[package]` no `Cargo.toml`) dentro dessa pasta e todas as suas subpastas, ignorando diretórios ocultos.
 - Exemplo para rodar na pasta padrão:
   ```bash
   cargo-clean-all
@@ -49,25 +50,29 @@ cargo-clean-all [diretorio_base]
 
 ---
 
-## 📋 O que o script faz em cada workspace?
+## 📋 O que o script faz em cada projeto?
 
-- Exibe o caminho do diretório do workspace.
+- Exibe o caminho do diretório do projeto e se é workspace ou package.
 - Limpa arquivos de build com `cargo clean` caso o diretório `target` exista.
-- Mostra mensagens de sucesso ou falha para cada workspace.
-- Se não houver `target` no workspace, mostra aviso.
+- Mostra mensagens de sucesso ou falha para cada projeto.
+- Se não houver `target` no projeto, mostra aviso.
 - Se o comando `cargo` não estiver instalado, aborta.
+- Se não tiver permissão de escrita no diretório, pula o projeto e mostra aviso.
 
 ---
 
 ## 🧹 Exemplo de saída
 
 ```
-🧹 Cleaning Cargo workspace: /home/user/Projects/rust-monorepo
-✅ Done: /home/user/Projects/rust-monorepo
+🧹 Limpando Cargo package: /home/user/Projects/meuapp
+✅ Finalizado: /home/user/Projects/meuapp
 -----------------------------------------------
-⚠️  No target directory found in: /home/user/Projects/empty-workspace (skipped)
+🧹 Limpando Cargo workspace: /home/user/Projects/rust-monorepo
+✅ Finalizado: /home/user/Projects/rust-monorepo
 -----------------------------------------------
-🎉 All Cargo workspaces cleaned!
+⚠️  Nenhum diretório target encontrado em: /home/user/Projects/empty-workspace (pulado)
+-----------------------------------------------
+🎉 Todos os projetos Cargo foram limpos!
 ```
 
 ---
@@ -76,8 +81,8 @@ cargo-clean-all [diretorio_base]
 
 - Diretórios ocultos aninhados podem não ser completamente ignorados em casos muito específicos.
 - Só remove arquivos gerados por `cargo build` (diretório `target`).
-- Assume que todos os workspaces usam a convenção padrão do Cargo.
-- Não limpa workspaces sem um diretório `target`.
+- Assume que todos os projetos usam a convenção padrão do Cargo.
+- Não limpa projetos sem um diretório `target`.
 
 ---
 
