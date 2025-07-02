@@ -1,59 +1,51 @@
 cargo-clean-all() {
-  # Define o diretório base como o primeiro argumento, ou usa ~/Repositories por padrão.
+  # Diretório base padrão
   local base_dir="${1:-$HOME/Repositories}"
-
-  # Variável para saber se algum projeto foi encontrado (usada para mensagem final).
   local found_any=false
 
-  # Verifica se o comando 'cargo' está disponível no PATH.
+  # Checa se cargo está disponível
   if ! command -v cargo >/dev/null 2>&1; then
     echo "❌ Cargo não está instalado ou não está no PATH. Abortando."
     return 1
   fi
 
-  # Array para armazenar caminhos dos workspaces já processados
+  # Lista de diretórios de workspaces já processados
   local -a workspaces=()
 
-  # Função auxiliar para checar se um caminho está dentro de algum workspace já processado
-  is_within_workspace() {
-    local path="$1"
-    for ws in "${workspaces[@]}"; do
-      case "$path" in
-        "$ws"/*) return 0 ;;  # está dentro de um workspace já processado
-      esac
-    done
-    return 1  # não está dentro de nenhum workspace já processado
-  }
+  # Primeiro, coleta todos os Cargo.toml válidos
+  mapfile -t all_cargo_tomls < <(
+    find "$base_dir" \
+      -type d -name '.*' -prune -false -o \
+      -type f -name Cargo.toml \
+      -exec awk '/^\s*\[(workspace|package)\]/ { found=1; exit } END { exit !found }' {} \; -print
+  )
 
-  # Busca todos os Cargo.toml válidos recursivamente, ignorando diretórios ocultos
-  find "$base_dir" \
-    -type d -name '.*' -prune -false -o \
-    -type f -name Cargo.toml \
-    -exec awk '/^\s*\[(workspace|package)\]/ { found=1; exit } END { exit !found }' {} \; -print |
-  while read -r cargo_toml; do
+  for cargo_toml in "${all_cargo_tomls[@]}"; do
     dir=$(dirname "$cargo_toml")
 
-    # Ignora se já está dentro de um workspace processado
-    if is_within_workspace "$dir"; then
-      continue
-    fi
+    # Se já está dentro de algum workspace, pula
+    skip=false
+    for ws in "${workspaces[@]}"; do
+      case "$dir/" in
+        "$ws/"* ) skip=true; break ;;
+      esac
+    done
+    $skip && continue
 
     # Marca que encontrou pelo menos um projeto
     found_any=true
 
-    # Verifica se tem permissão de escrita no diretório antes de tentar limpar.
+    # Se não pode escrever, avisa e pula
     if [ ! -w "$dir" ]; then
       echo "🚫 Sem permissão de escrita em: $dir (pulado)"
       echo "-----------------------------------------------"
       continue
     fi
 
-    # Só executa a limpeza se existir o diretório 'target' (onde ficam os arquivos compilados).
+    # Só executa a limpeza se existir o diretório 'target'
     if [ -d "$dir/target" ]; then
-      # Identifica se é workspace ou package, para ajustar a mensagem.
       if grep -q '^\s*\[workspace\]' "$cargo_toml"; then
         tipo="workspace"
-        # Adiciona o caminho do workspace ao array de workspaces processados
         workspaces+=("$dir")
       elif grep -q '^\s*\[package\]' "$cargo_toml"; then
         tipo="package"
